@@ -244,20 +244,20 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 	{
 		// URLs containing "://" are left untouched
 		return preg_replace_callback('/'.
-				'\[\['. // opening brackets
-					'(([^\]]*?)\:)?'. // namespace (if any)
-					'([^\]]*?)'. // target
+				'\[\['.             // opening brackets
+					//'(([^\]]*?)\:)?'. // namespace (if any)
+					'([^\]]*?)'.      // target
 					'(\|([^\]]*?))?'. // title (if any)
-				'\]\]'. // closing brackets
-				'([a-z]+)?'. // any suffixes
+				'\]\]'.             // closing brackets
+				'([a-z]+)?'.        // any suffixes
 				'/', array( & $this, '_doInternalURL_callback'), $text);
 	}
 
 	protected function _doInternalURL_callback($matches)
 	{
-		$text = (isset($matches[5])) ? $matches[5] : $matches[3];
+		$text = (isset($matches[3])) ? $matches[3] : $matches[1];
 
-		$uri  = $matches[3];
+		$uri  = $matches[1];
 
 		if ( ! in_array($uri, $this->_local_uris)) $this->_local_uris[] = $uri;
 

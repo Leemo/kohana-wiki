@@ -83,7 +83,11 @@ class Model_Wiki extends ORM {
 		(
 			'title' => array
 			(
-				array('not_empty')
+				array('not_empty'),
+				array('min_length', array(':value', 4)),
+				array('max_length', array(':value', 128)),
+				array(array($this, 'title_available'), array(':validation', ':field')),
+				array(array($this, 'is_url'), array(':validation', ':field', ':value')),
 			),
 			'markdown' => array
 			(
@@ -287,6 +291,29 @@ class Model_Wiki extends ORM {
 	}
 
 	/**
+	 * Returns all wiki-links of current wiki page
+	 *
+	 * @param    int    $id
+	 * @return   array
+	 */
+	protected function links($id)
+	{
+		if ($id instanceof $this)
+		{
+			$id = $id->pk();
+		}
+
+		return DB::select('id', 'title')
+			->from($this->_table_name)
+			->where('id', 'IN', DB::expr(DB::select('remote_id')
+				->from('wiki_links')
+				->where('wiki_id', '=', DB::expr($this->_table_name.'.'.'id'))
+				))
+			->execute($this->_db)
+			->as_array('id', 'title');
+	}
+
+	/**
 	 * Imposes a scope-condition on current sql- or orm-request
 	 *
 	 * @param    Database_Query_Builder_Select|Model_Wiki     $wiki
@@ -310,6 +337,41 @@ class Model_Wiki extends ORM {
 	}
 
 	/**
+	 * Does the reverse of _unique_key_exists() by triggering error
+	 * if project title exists.
+	 * Validation callback.
+	 *
+	 * @param   Validation  Validation object
+	 * @param   string      Field name
+	 * @return  void
+	 */
+	public function title_available(Validation $validation, $field)
+	{
+		if ($this->_unique_key_exists($validation[$field], 'title'))
+		{
+			$validation->error($field, 'available', array($validation[$field]));
+		}
+	}
+
+	/**
+	 * Trigger error if title is url
+	 *
+	 * @param   Validation  Validation object
+	 * @param   string      Field name
+	 * @param   string      Field value
+	 * @return  void
+	 */
+	public function is_url(Validation $validation, $field, $value)
+	{
+		$data = parse_url($value);
+
+		if (isset($data['scheme']) AND isset($data['host']))
+		{
+			$validation->error($field, 'not_url', array($validation[$field]));
+		}
+	}
+
+	/**
 	 * Returns all existing pages of current wiki
 	 *
 	 * @return array
@@ -323,26 +385,26 @@ class Model_Wiki extends ORM {
 	}
 
 	/**
-	 * Returns all wiki-links of current wiki page
+	 * Tests if a unique key value exists in the database.
 	 *
-	 * @param    int    $id
-	 * @return   array
+	 * @param   mixed    the value to test
+	 * @param   string   field name
+	 * @return  boolean
 	 */
-	protected function links($id)
+	protected function _unique_key_exists($value, $field = NULL)
 	{
-		if ($id instanceof $this)
+		if ($field === NULL)
 		{
-			$id = $id->pk();
+			// Automatically determine field by looking at the value
+			$field = $this->unique_key($value);
 		}
 
-		return DB::select('id', 'title')
+		return (bool) DB::select(array('COUNT("*")', 'total_count'))
 			->from($this->_table_name)
-			->where('id', 'IN', DB::expr(DB::select('remote_id')
-				->from('wiki_links')
-				->where('wiki_id', '=', DB::expr($this->_table_name.'.'.'id'))
-				))
+			->where($field, '=', $value)
+			->where($this->_primary_key, '!=', $this->pk())
 			->execute($this->_db)
-			->as_array('id', 'title');
+			->get('total_count');
 	}
 
 } // Model_Wiki
