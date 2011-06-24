@@ -52,13 +52,6 @@ class Model_Wiki extends ORM {
 	protected $_scope_column = NULL;
 
 	/**
-	 * Base URL
-	 *
-	 * @var type
-	 */
-	protected $_base_url;
-
-	/**
 	 * Image URL
 	 *
 	 * @var type
@@ -196,19 +189,6 @@ class Model_Wiki extends ORM {
 	}
 
 	/**
-	 * Sets base url
-	 *
-	 * @param    string       $base    Base URL
-	 * @return   Model_Wiki
-	 */
-	public function base_url($base_url)
-	{
-		$this->_base_url = $base_url;
-
-		return $this;
-	}
-
-	/**
 	 * Sets image url
 	 *
 	 * @param    string       $image_url    Image URL
@@ -282,7 +262,6 @@ class Model_Wiki extends ORM {
 		require Kohana::find_file('vendor', 'markdown/markdown');
 
 		// Set wiki stats
-		Wiki_Markdown::$base_url       = $this->_base_url;
 		Wiki_Markdown::$image_url      = $this->_image_url;
 		Wiki_Markdown::$existing_pages = $this->_existing_pages();
 		Wiki_Markdown::$local_url      = $this->_local_url;
