@@ -183,41 +183,6 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 		return $id;
 	}
 
-	public function doIncludeViews($text)
-	{
-		return $text;
-
-		if (preg_match_all('/{{([^\s{}]++)}}/', $text, $matches, PREG_SET_ORDER))
-		{
-			$replace = array();
-
-			$replace = array();
-
-			foreach ($matches as $set)
-			{
-				list($search, $view) = $set;
-
-				try
-				{
-					$replace[$search] = View::factory($view)->render();
-				}
-				catch (Exception $e)
-				{
-					ob_start();
-
-					// Capture the exception handler output and insert it instead
-					Kohana_exception::handler($e);
-
-					$replace[$search] = ob_get_clean();
-				}
-			}
-
-			$text = strtr($text, $replace);
-		}
-
-		return $text;
-	}
-
 	/**
 	 * Add the current base url to all local links.
 	 *
