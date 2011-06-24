@@ -165,10 +165,34 @@ class Model_Wiki extends ORM {
 	 */
 	public function update_page($values, $expected = array('title', 'markdown'))
 	{
+		if ( ! $this->loaded())
+		{
+			return FALSE;
+		}
+
 		return $this
 			->values($values, $expected)
 			->save()
 			->update_html();
+	}
+
+	/**
+	 * Removes wiku page
+	 *
+	 * @return Model_Wiki
+	 */
+	public function delete()
+	{
+		if ( ! $this->loaded())
+		{
+			return FALSE;
+		}
+
+		$this->_clear_referrers();
+
+		parent::delete();
+
+		return $this;
 	}
 
 	/**
@@ -264,19 +288,14 @@ class Model_Wiki extends ORM {
 		Wiki_Markdown::$local_url      = $this->_local_url;
 
 		$parser = new Wiki_Markdown;
-		$html   = $parser->transform($this->markdown);
+		$html   = $this->_min_html($parser->transform($this->markdown));
 
 		$links  = $parser->local_uris();
 
 		// TODO transaction
 
 		// Clear referrers
-		DB::update($this->_table_name)
-			->set(array('html' => ''))
-			->where($this->_primary_key, 'IN', DB::select('wiki_id')
-				->from('wiki_links')
-				->where('link', '=', $this->title))
-			->execute($this->_db);
+		$this->_clear_referrers();
 
 		// Delete links data
 		DB::delete('wiki_links')
@@ -416,6 +435,33 @@ class Model_Wiki extends ORM {
 			->where($this->_primary_key, '!=', $this->pk())
 			->execute($this->_db)
 			->get('total_count');
+	}
+
+	/**
+	 * Clear html code in all referred wiki pages
+	 *
+	 * @return void
+	 */
+	protected function _clear_referrers()
+	{
+		DB::update($this->_table_name)
+			->set(array('html' => ''))
+			->where($this->_primary_key, 'IN', DB::select('wiki_id')
+				->from('wiki_links')
+				->where('link', '=', $this->title))
+			->execute($this->_db);
+	}
+
+	/**
+	 * Removes unnecessary whitespaces from HTML code.
+	 * DB space is not infinite.
+	 *
+	 * @param    string   $html  HTML to minimize
+	 * @return   string   Minimized HTML
+	 */
+	protected function _min_html($html)
+	{
+		return preg_replace('/(?:(?)|(?))(\s+)(?=\<\/?)/', '', $html);
 	}
 
 } // Model_Wiki
