@@ -13,11 +13,6 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 	/**
 	 * @var  string  base url for links
 	 */
-	public static $base_url = '';
-
-	/**
-	 * @var  string  base url for links
-	 */
 	public static $local_url = ':page';
 
 	/**
@@ -63,9 +58,6 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 
 		// doLink is 20, add image url just before
 		$this->span_gamut['doInternalURL'] = 15;
-
-		// doLink is 20, add base url just before
-		$this->span_gamut['doBaseURL'] = 19;
 
 		// Add API links
 		$this->span_gamut['doAPI'] = 90;
@@ -181,20 +173,6 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 		}
 
 		return $id;
-	}
-
-	/**
-	 * Add the current base url to all local links.
-	 *
-	 *     [filesystem](about.filesystem "Optional title")
-	 *
-	 * @param   string  span text
-	 * @return  string
-	 */
-	public function doBaseURL($text)
-	{
-		// URLs containing "://" are left untouched
-		return preg_replace('~(?<!!)(\[.+?\]\()(?!\w++://)(?!#)(\S*(?:\s*+".+?")?\))~', '$1'.self::$base_url.'$2', $text);
 	}
 
 	/**
