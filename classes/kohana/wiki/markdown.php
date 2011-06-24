@@ -257,11 +257,11 @@ class Kohana_Wiki_Markdown extends MarkdownExtra_Parser {
 	{
 		$text = (isset($matches[5])) ? $matches[5] : $matches[3];
 
-		$uri  = Model_Wiki::word_to_uri($matches[3]);
+		$uri  = $matches[3];
 
 		if ( ! in_array($uri, $this->_local_uris)) $this->_local_uris[] = $uri;
 
-		$class = ( ! in_array($uri, self::$existing_pages)) ? ' class="wiki_empty"' : NULL;
+		$class = ( ! in_array(UTF8::strtolower($uri), self::$existing_pages)) ? ' class="wiki_empty"' : NULL;
 
 		return $this->hashPart('<a href="'.str_replace(':page', $uri, self::$local_url).'"'.$class.'>'.$text.'</a>');
 	}

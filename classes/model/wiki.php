@@ -1,5 +1,13 @@
 <?php defined('SYSPATH') or die('No direct script access.');
-
+/**
+ * Wiki link model.
+ *
+ * @package    Kohana/Wiki
+ * @category   Base
+ * @author     Alexey Popov
+ * @copyright  (c) 2009 Leemo Studio <http://leemo-studio.net>
+ * @license    http://www.opensource.org/licenses/bsd-license.php
+ */
 class Model_Wiki extends ORM {
 
 	/**
@@ -77,10 +85,6 @@ class Model_Wiki extends ORM {
 			(
 				array('not_empty')
 			),
-			'alias' => array
-			(
-				array('not_empty')
-			),
 			'markdown' => array
 			(
 				array('not_empty')
@@ -110,44 +114,54 @@ class Model_Wiki extends ORM {
 		return $this->html;
 	}
 
-	public function local_url($local_url)
+	/**
+	 * Apply scope condition (for many different wiki)
+	 *
+	 * @param     string       $value    Scope value
+	 * @return    Model_Wiki
+	 */
+	public function scope($value)
 	{
-		$this->_local_url = $local_url;
-
-		return $this;
-	}
-
-	public function scope($column, $value)
-	{
-		$this->_scope_column = $column;
-
 		return $this
-			->values($column, $value);
+			->values($this->_scope_column, $value);
 	}
 
-	public function create_page($values, $expected = array('title', 'alias', 'markdown'))
+	/**
+	 * Creates a wiki page
+	 *
+	 * @param    array      $values     Page values
+	 * @param    array      $expected   Expected rows
+	 * @return   Model_Wiki
+	 */
+	public function create_page($values, $expected = array('title', 'markdown'))
 	{
-		$values['alias'] = self::word_to_uri($values['title']);
-
-		$this
-			->values($values, $expected)
-			->save();
-
-		return $values['alias'];
-	}
-
-	public function update_page($values, $expected = array('title', 'alias', 'markdown'))
-	{
-		$values['alias'] = self::word_to_uri($values['title']);
-
 		$this
 			->values($values, $expected)
 			->save()
 			->update_html();
-
-		return $values['alias'];
 	}
 
+	/**
+	 * Updates current wiki page
+	 *
+	 * @param    array      $values     Page values
+	 * @param    array      $expected   Expected rows
+	 * @return   Model_Wiki
+	 */
+	public function update_page($values, $expected = array('title', 'markdown'))
+	{
+		return $this
+			->values($values, $expected)
+			->save()
+			->update_html();
+	}
+
+	/**
+	 * Sets base url
+	 *
+	 * @param    string       $base    Base URL
+	 * @return   Model_Wiki
+	 */
 	public function base_url($base_url)
 	{
 		$this->_base_url = $base_url;
@@ -155,6 +169,12 @@ class Model_Wiki extends ORM {
 		return $this;
 	}
 
+	/**
+	 * Sets image url
+	 *
+	 * @param    string       $image_url    Image URL
+	 * @return   Model_Wiki
+	 */
 	public function image_url($image_url)
 	{
 		$this->_image_url = $image_url;
@@ -162,6 +182,39 @@ class Model_Wiki extends ORM {
 		return $this;
 	}
 
+	/**
+	 * Sets local url for internal wiki pages.
+	 *
+	 * Local URL - is a string in which the expression :page
+	 * will be replaced by the title of the wiki pages.
+	 *
+	 * Example:
+	 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	 * $wiki = ORM::factory('Model_Wiki')
+	 *   ->local_url(Route::get('default')->uri(array(
+	 *     'controller' => 'wiki',
+	 *     'action'     => 'view',
+	 *     'id'         => ':page'
+	 *     )));
+	 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	 *
+	 * @param type $local_url
+	 * @return Model_Wiki
+	 */
+	public function local_url($local_url)
+	{
+		$this->_local_url = $local_url;
+
+		return $this;
+	}
+
+	/**
+	 * Updates markdown-data of current page
+	 * then updates HTML-data
+	 *
+	 * @param    string   $text   Wiki page text
+	 * @return   Model_Wiki
+	 */
 	public function update_markdown($text)
 	{
 		if ( ! $this->loaded())
@@ -175,6 +228,11 @@ class Model_Wiki extends ORM {
 			->update_html();
 	}
 
+	/**
+	 * Recompiles HTML-text of current wiki page
+	 *
+	 * @return Model_Wiki
+	 */
 	public function update_html()
 	{
 		if ( ! $this->loaded())
@@ -195,32 +253,45 @@ class Model_Wiki extends ORM {
 
 		$links  = $parser->local_uris();
 
-		// Update link info
-		DB::delete('wiki_links')
-			->where('wiki_id', '=', $this->pk())
-			->execute($this->_db);
+		// TODO transaction
 
+		// Clear referrers
 		DB::update($this->_table_name)
 			->set(array('html' => ''))
 			->where($this->_primary_key, 'IN', DB::select('wiki_id')
 				->from('wiki_links')
-				->where('link', '=', $this->alias))
+				->where('link', '=', $this->title))
 			->execute($this->_db);
 
-		$insert = DB::insert('wiki_links', array('wiki_id', 'link'));
+		// Delete links data
+		DB::delete('wiki_links')
+			->where('wiki_id', '=', $this->pk())
+			->execute($this->_db);
 
-		foreach ($links as $link)
+		if (sizeof($links) > 0)
 		{
-			$insert->values(array($this->pk(), $link));
-		}
+			// Insert new links data
+			$insert = DB::insert('wiki_links', array('wiki_id', 'link'));
 
-		$insert->execute($this->_db);
+			foreach ($links as $link)
+			{
+				$insert->values(array($this->pk(), $link));
+			}
+
+			$insert->execute($this->_db);
+		}
 
 		return $this->values(array(
 			'html' => $html
 		))->save();
 	}
 
+	/**
+	 * Imposes a scope-condition on current sql- or orm-request
+	 *
+	 * @param    Database_Query_Builder_Select|Model_Wiki     $wiki
+	 * @return   Database_Query_Builder_Select
+	 */
 	protected function _apply_scope($wiki)
 	{
 		if (! $wiki instanceof $this AND
@@ -238,29 +309,40 @@ class Model_Wiki extends ORM {
 			->where($this->_scope_coumn, '=', $this->{$this->_scope_column});
 	}
 
+	/**
+	 * Returns all existing pages of current wiki
+	 *
+	 * @return array
+	 */
 	protected function _existing_pages()
 	{
-		return $this->_apply_scope(DB::select('id', 'alias')
+		return array_map(create_function('$a', 'return UTF8::strtolower($a);'), $this->_apply_scope(DB::select('id', 'title')
 			->from($this->_table_name))
 			->execute($this->_db)
-			->as_array('id', 'alias');
+			->as_array('id', 'title'));
 	}
 
-	public static function word_to_uri($text)
-	{
-		return preg_replace('/([^[:alnum:]_-]*)/', '', strtolower(str_replace(' ', '-', $text)));
-	}
-
+	/**
+	 * Returns all wiki-links of current wiki page
+	 *
+	 * @param    int    $id
+	 * @return   array
+	 */
 	protected function links($id)
 	{
-		return DB::select('id', 'alias')
+		if ($id instanceof $this)
+		{
+			$id = $id->pk();
+		}
+
+		return DB::select('id', 'title')
 			->from($this->_table_name)
 			->where('id', 'IN', DB::expr(DB::select('remote_id')
 				->from('wiki_links')
 				->where('wiki_id', '=', DB::expr($this->_table_name.'.'.'id'))
 				))
 			->execute($this->_db)
-			->as_array('id', 'alias');
+			->as_array('id', 'title');
 	}
 
 } // Model_Wiki
