@@ -103,7 +103,18 @@ class Model_Wiki extends ORM {
 	 */
 	public function filters()
 	{
-		return array();
+		return array
+		(
+			'title'     => array
+			(
+				array('strip_tags'),
+				array('trim')
+			),
+			'markdown' => array
+			(
+				array('trim')
+			)
+		);
 	}
 
 	public function html()
