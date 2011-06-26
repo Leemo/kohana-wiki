@@ -267,6 +267,11 @@ class Model_Wiki extends ORM {
 		Wiki_Markdown::$local_url      = $this->_local_url;
 
 		$parser = new Wiki_Markdown;
+
+		// XSS protection
+		$parser->no_markup   = TRUE;
+		$parser->no_entities = TRUE;
+
 		$html   = $this->_min_html($parser->transform($this->markdown));
 
 		$links  = $parser->local_uris();
