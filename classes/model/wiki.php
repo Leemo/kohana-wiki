@@ -440,7 +440,7 @@ class Model_Wiki extends ORM {
 	 */
 	protected function _min_html($html)
 	{
-		return preg_replace('/(?:(?)|(?))(\s+)(?=\<\/?)/', '', $html);
+		return preg_replace('/(\s+)?(\<.+\>)(\s+)?/', '$2', $html);
 	}
 
 } // Model_Wiki
