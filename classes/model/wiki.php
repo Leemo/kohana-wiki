@@ -49,7 +49,7 @@ class Model_Wiki extends ORM {
 		'links' => array('model' => 'wiki_link')
 	);
 
-	protected $_scope_column = NULL;
+	protected $_scope_column = 'scope';
 
 	/**
 	 * Image URL
@@ -130,8 +130,9 @@ class Model_Wiki extends ORM {
 	 */
 	public function scope($value)
 	{
-		return $this
-			->values($this->_scope_column, $value);
+		$this->{$this->_scope_column} = $value;
+
+		return $this;
 	}
 
 	/**
@@ -145,6 +146,7 @@ class Model_Wiki extends ORM {
 	{
 		$this
 			->values($values, $expected)
+			->scope($this->{$this->_scope_column})
 			->save()
 			->update_html();
 	}
@@ -163,8 +165,11 @@ class Model_Wiki extends ORM {
 			return FALSE;
 		}
 
+		$expected[] = $this->_scope_column;
+
 		return $this
 			->values($values, $expected)
+			->scope($this->{$this->_scope_column})
 			->save()
 			->update_html();
 	}
@@ -347,7 +352,7 @@ class Model_Wiki extends ORM {
 		}
 
 		return $wiki
-			->where($this->_scope_coumn, '=', $this->{$this->_scope_column});
+			->where($this->_scope_column, '=', $this->{$this->_scope_column});
 	}
 
 	/**
@@ -385,6 +390,21 @@ class Model_Wiki extends ORM {
 		}
 	}
 
+	public function find()
+	{
+		$this->where($this->_scope_column, '=', $this->{$this->_scope_column});
+
+		return parent::find();
+	}
+
+	public function find_all()
+	{
+		$this->where($this->_scope_column, '=', $this->{$this->_scope_column});
+
+		return parent::find_all();
+	}
+
+
 	/**
 	 * Returns all existing pages of current wiki
 	 *
@@ -417,6 +437,7 @@ class Model_Wiki extends ORM {
 			->from($this->_table_name)
 			->where($field, '=', $value)
 			->where($this->_primary_key, '!=', $this->pk())
+			->where($this->_scope_column, '=', $this->{$this->_scope_column})
 			->execute($this->_db)
 			->get('total_count');
 	}
